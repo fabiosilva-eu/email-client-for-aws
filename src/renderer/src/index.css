@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Form controls must always allow focus, text selection, and receive clicks */
+  input,
+  textarea,
+  select,
+  button,
+  [contenteditable="true"] {
+    -webkit-user-select: auto !important;
+    user-select: auto !important;
+    -webkit-app-region: no-drag !important;
+  }
+
+  /* Custom scrollbars */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #090d16;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #1e293b;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #334155;
+  }
+}
+
+/* Electron titlebar drag regions */
+.app-drag-region {
+  -webkit-app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag !important;
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+}

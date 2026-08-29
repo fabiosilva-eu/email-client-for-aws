@@ -1,0 +1,90 @@
+# S3 Email Client - Project TODO
+
+================================================================================
+Phase 1: Project Setup & Foundation
+================================================================================
+- [x] Initialize Node.js / Electron + Vite + React + TypeScript + Tailwind CSS project
+- [x] Configure Electron main, preload, and renderer processes with secure IPC bridge
+- [x] Set up Lucide icons and Tailwind UI styling
+- [x] Configure packaging and build scripts (electron-builder / vite-plugin-electron)
+
+================================================================================
+Phase 2: Configuration & Credentials Management
+================================================================================
+- [x] Create local configuration file handler (`config.json` in local user config directory)
+- [x] Build Settings UI modal/drawer in React:
+    - [x] AWS S3 Bucket Name
+    - [x] AWS Region (with standard region selector + custom input)
+    - [x] AWS Access Key ID
+    - [x] AWS Secret Access Key
+    - [x] AWS Session Token (optional)
+    - [x] S3 Prefix / Folder path (optional filter)
+    - [x] Max Keys per page / fetch limit
+- [x] Implement "Test AWS Connection" IPC handler and UI button with live feedback
+- [x] Load and persist config changes to local configuration file
+
+================================================================================
+Phase 3: S3 Email Listing & Header Extraction
+================================================================================
+- [x] Implement S3 `ListObjectsV2` service in Electron main process
+- [x] Implement S3 streaming reader for email header extraction (reading first few KB for speed):
+    - [x] Extract From / Sender
+    - [x] Extract Date / Received timestamp
+    - [x] Extract Subject
+    - [x] S3 Object LastModified date & file size
+- [x] Build modern Email List UI:
+    - [x] Table/Card view of emails
+    - [x] Search & filter bar (by Sender, Subject, Date range, S3 Key)
+    - [x] Refresh button & loading skeleton states
+    - [x] Sorting (by Sender, Subject, Date, Size)
+    - [x] Error alert handling (missing bucket, bad credentials, network timeouts)
+
+================================================================================
+Phase 4: Multi-Window Email Viewer
+================================================================================
+- [x] Implement Electron `BrowserWindow` manager for opening separate reader windows
+- [x] Implement IPC protocol for passing email S3 Key and fetching full object content
+- [x] Build Email Viewer Window UI:
+    - [x] Top header bar with Subject, From, To, CC, Date, S3 Key, Size
+    - [x] Full raw message text viewer with monospace font, word wrap toggle, search highlight
+    - [x] Search inside raw content
+    - [x] Copy raw content to clipboard
+    - [x] Download/Save raw `.eml` file to local disk
+
+================================================================================
+Phase 5: MIME Parsing Engine & Rich Rendering
+================================================================================
+- [x] Build full MIME Parsing Engine (`mailparser`):
+    - [x] Rich HTML email body rendering (with DOMPurify sanitization & toggle remote images)
+    - [x] Plain text body fallback rendering
+    - [x] Multipart attachment listing, previewing, and downloading
+    - [x] Inline CID images resolution
+
+================================================================================
+Phase 6: SMTP Configuration & Email Sending (Current Phase)
+================================================================================
+- [ ] Add optional SMTP Configuration tab to Settings Modal:
+    - [ ] SMTP Host / Server
+    - [ ] SMTP Port (e.g. 587, 465, 25)
+    - [ ] Secure Connection (SSL/TLS vs STARTTLS)
+    - [ ] Username
+    - [ ] Password
+    - [ ] Default "From" Sender Name and Email Address
+    - [ ] "Test SMTP Connection" button with live status feedback
+- [ ] Implement SMTP Service (`nodemailer`) and IPC handlers in Main process (`smtp:test`, `smtp:send`)
+- [ ] Build Email Composer Component:
+    - [ ] Compose from scratch ("New Email" button on Main window header)
+    - [ ] "Reply" action on opened email (pre-populates To, Subject "Re: ...", In-Reply-To header, quoted text)
+    - [ ] "Reply to All" action on opened email (pre-populates To, CCs, Subject, quoted text)
+    - [ ] "Forward" action on opened email (pre-populates Subject "Fwd: ...", forwarded header block, attachments)
+    - [ ] Attachment picker & drag-and-drop for outgoing emails
+    - [ ] Sending progress, success confirmation, and error alerts
+    - [ ] Validation preventing sending if SMTP is not configured
+
+================================================================================
+Future Roadmap
+================================================================================
+- [ ] Secure credential encryption (macOS Keychain / safeStorage / master password)
+- [ ] AWS IAM Roles / SSO Profiles / `~/.aws/credentials` integration
+- [ ] S3 Batch operations (delete email, move/archive to another S3 prefix, tag emails)
+- [ ] Export emails to EML / PDF / JSON
