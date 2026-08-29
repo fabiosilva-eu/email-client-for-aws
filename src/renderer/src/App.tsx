@@ -5,6 +5,7 @@ import { SettingsModal } from './components/SettingsModal'
 import { EmailList } from './components/EmailList'
 import { EmailViewer } from './components/EmailViewer'
 import { EmailComposer } from './components/EmailComposer'
+import { DeleteConfirmModal } from './components/DeleteConfirmModal'
 import type { AppConfig, EmailSummary, FolderType } from './types'
 
 export const App: React.FC = () => {
@@ -57,6 +58,10 @@ const MainWindow: React.FC = () => {
   const [isComposerOpen, setIsComposerOpen] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
+
+  // Delete modal state
+  const [deleteTarget, setDeleteTarget] = useState<{ key: string; subject: string } | null>(null)
+  const [isDeleting, setIsDeleting] = useState<boolean>(false)
 
   // Fetch emails for a specific folder from S3
   const fetchFolderEmails = useCallback(
@@ -120,9 +125,44 @@ const MainWindow: React.FC = () => {
   const handleSelectFolder = (folder: FolderType) => {
     setActiveFolder(folder)
     setError(null)
-    // If not cached, fetch immediately; if cached, fetch fresh in background
     const hasCache = folderCache[folder] && folderCache[folder].length > 0
     fetchFolderEmails(folder, config, hasCache)
+  }
+
+  // Handle email deletion confirmation
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
+    try {
+      if (window.electronAPI?.deleteEmail) {
+        const isPermanent = activeFolder === 'trash' || deleteTarget.key.startsWith('trash/')
+        const res = await window.electronAPI.deleteEmail(deleteTarget.key, isPermanent)
+
+        if (res.success) {
+          // Remove from current folder list
+          setFolderCache((prev) => {
+            const updated = prev[activeFolder].filter((e) => e.key !== deleteTarget.key)
+            return { ...prev, [activeFolder]: updated }
+          })
+          setFolderCounts((prev) => ({
+            ...prev,
+            [activeFolder]: Math.max(0, (prev[activeFolder] || 1) - 1)
+          }))
+
+          // If moved to trash, refresh trash folder in the background
+          if (!isPermanent) {
+            fetchFolderEmails('trash', config, true)
+          }
+        } else {
+          alert(res.error || 'Failed to delete email.')
+        }
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Error occurred while deleting email.')
+    } finally {
+      setIsDeleting(false)
+      setDeleteTarget(null)
+    }
   }
 
   // Load configuration on mount
@@ -193,6 +233,7 @@ const MainWindow: React.FC = () => {
             onSelectEmail={handleSelectEmail}
             onRefresh={() => fetchFolderEmails(activeFolder, config, false)}
             onCompose={() => setIsComposerOpen(true)}
+            onDeleteEmail={(key, subject) => setDeleteTarget({ key, subject })}
           />
         </div>
       </main>
@@ -211,13 +252,23 @@ const MainWindow: React.FC = () => {
         isOpen={isComposerOpen}
         onClose={() => {
           setIsComposerOpen(false)
-          // Refresh sent and inbox folders when composer closes (in case email was sent)
           fetchFolderEmails('sent', config, true)
         }}
         onOpenSmtpSettings={() => {
           setSettingsTab('smtp')
           setIsSettingsOpen(true)
         }}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteTarget)}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleConfirmDelete}
+        emailSubject={deleteTarget?.subject}
+        emailKey={deleteTarget?.key || ''}
+        isPermanent={activeFolder === 'trash' || deleteTarget?.key.startsWith('trash/')}
+        loading={isDeleting}
       />
     </div>
   )

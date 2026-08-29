@@ -150,6 +150,7 @@ export interface ElectronAPI {
     contentBase64: string
     contentType: string
   }) => Promise<SaveAttachmentResult>
+  deleteEmail: (key: string, permanent?: boolean) => Promise<{ success: boolean; error?: string }>
 }
 
 declare global {

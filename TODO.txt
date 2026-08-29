@@ -96,9 +96,24 @@ Phase 7: Folder Navigation & S3 Sent Mail Storage
 - [x] Dynamic folder switching & cached email lists per folder
 
 ================================================================================
+Phase 8: Message Deletion & Trash Workflow
+================================================================================
+- [x] Add Delete Action on Email List Row:
+    - [x] Trash can icon button on hover for each email row
+    - [x] Confirmation prompt / modal before moving email to Trash (or permanently deleting)
+- [x] Add Delete Action inside Email Viewer Window:
+    - [x] "Delete Message" toolbar button inside open email window
+    - [x] Confirmation prompt / modal before deletion
+    - [x] Close viewer window automatically upon successful deletion and trigger list refresh
+- [x] Implement S3 Deletion & Move-to-Trash Service in Main Process:
+    - [x] Move email to `trash/` prefix (using S3 `CopyObject` + `DeleteObject`)
+    - [x] Permanent delete action when deleting an item that is already in the Trash folder
+    - [x] Update folder caches and badge counters on deletion
+
+================================================================================
 Future Roadmap
 ================================================================================
 - [ ] Secure credential encryption (macOS Keychain / safeStorage / master password)
 - [ ] AWS IAM Roles / SSO Profiles / `~/.aws/credentials` integration
-- [ ] S3 Batch operations (delete email, move/archive to another S3 prefix, tag emails)
+- [ ] S3 Batch operations (bulk delete, bulk move/archive, tag emails)
 - [ ] Export emails to EML / PDF / JSON

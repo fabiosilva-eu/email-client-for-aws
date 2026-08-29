@@ -20,12 +20,14 @@ import {
   Users,
   Reply,
   ReplyAll,
-  Forward
+  Forward,
+  Trash2
 } from 'lucide-react'
 import { HtmlEmailViewer } from './HtmlEmailViewer'
 import { AttachmentList } from './AttachmentList'
 import { EmailComposer, EmailComposerInitialData } from './EmailComposer'
 import { SettingsModal } from './SettingsModal'
+import { DeleteConfirmModal } from './DeleteConfirmModal'
 import type { EmailDetail, AppConfig } from '../types'
 
 interface EmailViewerProps {
@@ -70,6 +72,8 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
   const [composerData, setComposerData] = useState<EmailComposerInitialData | null>(null)
   const [isComposerOpen, setIsComposerOpen] = useState<boolean>(false)
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false)
+  const [isDeleting, setIsDeleting] = useState<boolean>(false)
   const [currentConfig, setCurrentConfig] = useState<AppConfig | null>(null)
 
   const contentRef = useRef<HTMLPreElement>(null)
@@ -203,6 +207,29 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
     setIsComposerOpen(true)
   }
 
+  // Delete email handler
+  const handleDeleteConfirm = async () => {
+    if (!key) return
+    setIsDeleting(true)
+    try {
+      if (window.electronAPI?.deleteEmail) {
+        const isPermanent = key.startsWith('trash/')
+        const res = await window.electronAPI.deleteEmail(key, isPermanent)
+        if (res.success) {
+          window.close()
+          return
+        } else {
+          alert(res.error || 'Failed to delete email from S3.')
+        }
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Error occurred while deleting email.')
+    } finally {
+      setIsDeleting(false)
+      setIsDeleteModalOpen(false)
+    }
+  }
+
   // Copy raw content
   const handleCopy = async () => {
     if (!email?.rawContent) return
@@ -330,6 +357,17 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
             >
               <Forward className="w-3.5 h-3.5 text-indigo-400" />
               <span>Forward</span>
+            </button>
+
+            <div className="h-4 w-px bg-slate-700 mx-0.5" />
+
+            <button
+              onClick={() => setIsDeleteModalOpen(true)}
+              title={key.startsWith('trash/') ? 'Permanently delete this email' : 'Move email to Trash'}
+              className="px-2.5 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 active:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <span>Delete</span>
             </button>
           </div>
         </div>
@@ -553,6 +591,17 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
           }}
         />
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        emailSubject={email.subject}
+        emailKey={email.key}
+        isPermanent={email.key.startsWith('trash/')}
+        loading={isDeleting}
+      />
     </div>
   )
 }

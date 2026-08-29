@@ -3,7 +3,9 @@ import {
   ListObjectsV2Command,
   GetObjectCommand,
   HeadBucketCommand,
-  PutObjectCommand
+  PutObjectCommand,
+  CopyObjectCommand,
+  DeleteObjectCommand
 } from '@aws-sdk/client-s3'
 import { dialog } from 'electron'
 import fs from 'node:fs'
@@ -428,3 +430,59 @@ export async function saveAttachmentToDisk(payload: {
     return { success: false, error: error?.message || 'Failed to save attachment file.' }
   }
 }
+
+/**
+ * Delete an email from S3 or move it to trash
+ * If permanent is true OR the item is already in trash/, it is permanently deleted with DeleteObjectCommand.
+ * Otherwise, it is copied to trash/ and the original key is deleted.
+ */
+export async function deleteS3Email(
+  key: string,
+  permanent = false
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const cfg = getConfig()
+    if (!cfg.bucket) {
+      return { success: false, error: 'S3 Bucket is not configured.' }
+    }
+
+    const client = createS3Client(cfg)
+    const bucket = cfg.bucket.trim()
+    const isAlreadyInTrash = key.startsWith('trash/')
+
+    if (permanent || isAlreadyInTrash) {
+      // Permanently delete the object
+      const delCmd = new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key
+      })
+      await client.send(delCmd)
+      return { success: true }
+    } else {
+      // Move to trash/: Copy to trash/ then delete original
+      const filename = key.split('/').pop() || key
+      const destinationKey = `trash/${filename}`
+
+      // Copy to trash (CopySource must be bucket/key URL encoded)
+      const copyCmd = new CopyObjectCommand({
+        Bucket: bucket,
+        CopySource: `${bucket}/${encodeURIComponent(key)}`,
+        Key: destinationKey
+      })
+      await client.send(copyCmd)
+
+      // Delete original
+      const delCmd = new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: key
+      })
+      await client.send(delCmd)
+
+      return { success: true }
+    }
+  } catch (error: any) {
+    console.error(`Failed to delete email key "${key}":`, error)
+    return { success: false, error: error?.message || `Failed to delete email "${key}".` }
+  }
+}
+

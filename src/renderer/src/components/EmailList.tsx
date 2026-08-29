@@ -7,7 +7,8 @@ import {
   AlertCircle,
   FolderOpen,
   ArrowUpDown,
-  X
+  X,
+  Trash2
 } from 'lucide-react'
 import type { EmailSummary, AwsConfig, FolderType } from '../types'
 
@@ -21,6 +22,7 @@ interface EmailListProps {
   onSelectEmail: (key: string) => void
   onRefresh: () => void
   onCompose?: () => void
+  onDeleteEmail?: (key: string, subject: string) => void
 }
 
 function formatBytes(bytes: number, decimals = 1): string {
@@ -58,7 +60,8 @@ export const EmailList: React.FC<EmailListProps> = ({
   onOpenSettings,
   onSelectEmail,
   onRefresh,
-  onCompose
+  onCompose,
+  onDeleteEmail
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<'date' | 'from' | 'subject' | 'size'>('date')
@@ -307,6 +310,7 @@ export const EmailList: React.FC<EmailListProps> = ({
                     <ArrowUpDown className="w-3 h-3 text-slate-500" />
                   </div>
                 </th>
+                {onDeleteEmail && <th className="py-3 px-3 w-12 text-right"></th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
@@ -367,6 +371,26 @@ export const EmailList: React.FC<EmailListProps> = ({
                         </span>
                       </div>
                     </td>
+
+                    {/* Delete Action */}
+                    {onDeleteEmail && (
+                      <td
+                        className="py-3.5 px-3 text-right whitespace-nowrap w-12"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeleteEmail(email.key, email.subject)
+                          }}
+                          title={folder === 'trash' ? 'Permanently Delete' : 'Move to Trash'}
+                          className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/15 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )
               })}

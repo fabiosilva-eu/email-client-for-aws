@@ -140,8 +140,9 @@ npm run typecheck
 | `config:save` | Renderer $\rightarrow$ Main | `AppConfig` | `{ success: boolean }` | Persist config to disk |
 | `config:getPath` | Renderer $\rightarrow$ Main | None | `string` | Get path to local `config.json` |
 | `s3:testConnection` | Renderer $\rightarrow$ Main | `AppConfig` | `{ success: boolean, message?: string }` | Verify AWS credentials |
-| `s3:listEmails` | Renderer $\rightarrow$ Main | `{ prefix?: string, maxKeys?: number }` | `EmailSummary[]` | List objects & parse headers |
-| `s3:getEmailContent` | Renderer $\rightarrow$ Main | `{ key: string }` | `EmailDetail` | Get full parsed and raw object content |
+| `s3:listEmails` | Renderer $\rightarrow$ Main | `{ prefix?: string, maxKeys?: number, folder?: string }` | `ListEmailsResult` | List objects & parse headers |
+| `s3:getEmailContent` | Renderer $\rightarrow$ Main | `{ key: string }` | `EmailContentResult` | Get full parsed and raw object content |
+| `s3:deleteEmail` | Renderer $\rightarrow$ Main | `{ key: string, permanent?: boolean }` | `{ success: boolean, error?: string }` | Move to trash or permanently delete S3 email |
 | `attachment:save` | Renderer $\rightarrow$ Main | `{ filename, contentBase64, contentType }` | `SaveAttachmentResult` | Save attachment via native dialog |
 | `smtp:test` | Renderer $\rightarrow$ Main | `SmtpConfig` | `{ success: boolean, message?: string }` | Verify SMTP connection |
 | `smtp:send` | Renderer $\rightarrow$ Main | `OutgoingEmailPayload` | `SendEmailResult` | Send email via SMTP (`nodemailer`) |

@@ -12,7 +12,9 @@ const api: ElectronAPI = {
   sendEmail: (payload: OutgoingEmailPayload) => ipcRenderer.invoke('smtp:send', payload),
   openEmailViewer: (key: string) => ipcRenderer.invoke('window:openViewer', key),
   getConfigPath: () => ipcRenderer.invoke('config:getPath'),
-  saveAttachment: (payload) => ipcRenderer.invoke('attachment:save', payload)
+  saveAttachment: (payload) => ipcRenderer.invoke('attachment:save', payload),
+  deleteEmail: (key: string, permanent?: boolean) =>
+    ipcRenderer.invoke('s3:deleteEmail', { key, permanent })
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)

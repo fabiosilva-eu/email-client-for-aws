@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, Menu, MenuItemConstructorOptions } from 'electron'
 import { getConfig, saveConfig, getConfigPath, AwsConfig } from './config'
-import { testS3Connection, listS3Emails, getS3EmailContent, saveAttachmentToDisk } from './s3'
+import { testS3Connection, listS3Emails, getS3EmailContent, saveAttachmentToDisk, deleteS3Email } from './s3'
 import { testSmtpConnection, sendSmtpEmail } from './smtp'
 import { createMainWindow, createViewerWindow } from './windows'
 import type { OutgoingEmailPayload, SmtpConfig } from '../renderer/src/types'
@@ -108,6 +108,10 @@ function registerIpcHandlers() {
 
   ipcMain.handle('s3:getEmailContent', async (_, key: string) => {
     return getS3EmailContent(key)
+  })
+
+  ipcMain.handle('s3:deleteEmail', async (_, { key, permanent }: { key: string; permanent?: boolean }) => {
+    return deleteS3Email(key, permanent)
   })
 
   ipcMain.handle('attachment:save', async (_, payload: { filename: string; contentBase64: string; contentType: string }) => {
