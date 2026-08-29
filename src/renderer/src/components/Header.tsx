@@ -7,13 +7,15 @@ interface HeaderProps {
   loading: boolean
   onRefresh: () => void
   onOpenSettings: () => void
+  onCompose: () => void
 }
 
 export const Header: React.FC<HeaderProps> = ({
   config,
   loading,
   onRefresh,
-  onOpenSettings
+  onOpenSettings,
+  onCompose
 }) => {
   const isConfigured = Boolean(config?.bucket && config?.accessKeyId && config?.secretAccessKey)
 
@@ -28,7 +30,7 @@ export const Header: React.FC<HeaderProps> = ({
           <h1 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
             S3 Email Client
             <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-              v1.0
+              v0.1
             </span>
           </h1>
         </div>
@@ -59,6 +61,15 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Right Action buttons */}
       <div className="flex items-center gap-2 app-no-drag">
+        <button
+          onClick={onCompose}
+          title="Compose New Email"
+          className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white transition flex items-center gap-1.5 text-xs font-semibold shadow-md shadow-indigo-600/20 cursor-pointer"
+        >
+          <Mail className="w-3.5 h-3.5" />
+          <span>Compose</span>
+        </button>
+
         <button
           onClick={onRefresh}
           disabled={loading || !isConfigured}

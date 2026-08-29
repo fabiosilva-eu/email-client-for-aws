@@ -1,25 +1,28 @@
 import { app } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
+import type { AppConfig, SmtpConfig } from '../renderer/src/types'
 
-export interface AwsConfig {
-  bucket: string
-  region: string
-  accessKeyId: string
-  secretAccessKey: string
-  sessionToken?: string
-  prefix?: string
-  maxKeys?: number
-}
+export type { AppConfig, SmtpConfig }
+export type AwsConfig = AppConfig
 
-const DEFAULT_CONFIG: AwsConfig = {
+const DEFAULT_CONFIG: AppConfig = {
   bucket: '',
   region: 'us-east-1',
   accessKeyId: '',
   secretAccessKey: '',
   sessionToken: '',
   prefix: '',
-  maxKeys: 100
+  maxKeys: 100,
+  smtp: {
+    host: '',
+    port: 587,
+    secure: false,
+    user: '',
+    password: '',
+    fromName: '',
+    fromEmail: ''
+  }
 }
 
 export function getConfigPath(): string {
@@ -27,12 +30,11 @@ export function getConfigPath(): string {
     const userDataPath = app.getPath('userData')
     return path.join(userDataPath, 'config.json')
   } catch {
-    // Fallback if app is not yet initialized in tests
     return path.join(process.cwd(), 'config.json')
   }
 }
 
-export function getConfig(): AwsConfig {
+export function getConfig(): AppConfig {
   const filePath = getConfigPath()
   try {
     if (fs.existsSync(filePath)) {
@@ -40,7 +42,11 @@ export function getConfig(): AwsConfig {
       const parsed = JSON.parse(data)
       return {
         ...DEFAULT_CONFIG,
-        ...parsed
+        ...parsed,
+        smtp: {
+          ...DEFAULT_CONFIG.smtp,
+          ...(parsed.smtp || {})
+        }
       }
     }
   } catch (error) {
@@ -49,7 +55,7 @@ export function getConfig(): AwsConfig {
   return DEFAULT_CONFIG
 }
 
-export function saveConfig(newConfig: AwsConfig): { success: boolean; message?: string } {
+export function saveConfig(newConfig: AppConfig): { success: boolean; message?: string } {
   const filePath = getConfigPath()
   try {
     const dir = path.dirname(filePath)
@@ -64,4 +70,3 @@ export function saveConfig(newConfig: AwsConfig): { success: boolean; message?: 
     return { success: false, message: errMessage }
   }
 }
-

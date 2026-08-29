@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import {
   Search,
-  ExternalLink,
   Mail,
   Calendar,
   FileText,
@@ -10,16 +9,18 @@ import {
   ArrowUpDown,
   X
 } from 'lucide-react'
-import type { EmailSummary, AwsConfig } from '../types'
+import type { EmailSummary, AwsConfig, FolderType } from '../types'
 
 interface EmailListProps {
   emails: EmailSummary[]
   loading: boolean
   error: string | null
   config: AwsConfig | null
+  folder?: FolderType
   onOpenSettings: () => void
   onSelectEmail: (key: string) => void
   onRefresh: () => void
+  onCompose?: () => void
 }
 
 function formatBytes(bytes: number, decimals = 1): string {
@@ -53,9 +54,11 @@ export const EmailList: React.FC<EmailListProps> = ({
   loading,
   error,
   config,
+  folder = 'inbox',
   onOpenSettings,
   onSelectEmail,
-  onRefresh
+  onRefresh,
+  onCompose
 }) => {
   const [searchQuery, setSearchQuery] = useState('')
   const [sortField, setSortField] = useState<'date' | 'from' | 'subject' | 'size'>('date')
@@ -72,6 +75,7 @@ export const EmailList: React.FC<EmailListProps> = ({
       list = list.filter((email) => {
         return (
           email.from.toLowerCase().includes(q) ||
+          (email.to && email.to.toLowerCase().includes(q)) ||
           email.subject.toLowerCase().includes(q) ||
           email.key.toLowerCase().includes(q) ||
           email.date.toLowerCase().includes(q)
@@ -83,18 +87,19 @@ export const EmailList: React.FC<EmailListProps> = ({
       let valA: string | number = ''
       let valB: string | number = ''
 
-      if (sortField === 'date') {
-        const timeA = new Date(a.date || a.lastModified).getTime() || 0
-        const timeB = new Date(b.date || b.lastModified).getTime() || 0
-        return sortAsc ? timeA - timeB : timeB - timeA
-      } else if (sortField === 'size') {
-        return sortAsc ? a.size - b.size : b.size - a.size
-      } else if (sortField === 'from') {
-        valA = a.from.toLowerCase()
-        valB = b.from.toLowerCase()
+      if (sortField === 'from') {
+        valA = folder === 'sent' ? (a.to || a.from).toLowerCase() : a.from.toLowerCase()
+        valB = folder === 'sent' ? (b.to || b.from).toLowerCase() : b.from.toLowerCase()
       } else if (sortField === 'subject') {
         valA = a.subject.toLowerCase()
         valB = b.subject.toLowerCase()
+      } else if (sortField === 'size') {
+        valA = a.size
+        valB = b.size
+      } else {
+        // Date sort (fallback to lastModified if date is missing)
+        valA = a.date || a.lastModified
+        valB = b.date || b.lastModified
       }
 
       if (valA < valB) return sortAsc ? -1 : 1
@@ -103,7 +108,7 @@ export const EmailList: React.FC<EmailListProps> = ({
     })
 
     return list
-  }, [emails, searchQuery, sortField, sortAsc])
+  }, [emails, searchQuery, sortField, sortAsc, folder])
 
   const handleSort = (field: 'date' | 'from' | 'subject' | 'size') => {
     if (sortField === field) {
@@ -114,22 +119,49 @@ export const EmailList: React.FC<EmailListProps> = ({
     }
   }
 
+  const getEmptyStateDetails = () => {
+    if (searchQuery) {
+      return {
+        title: 'No matching emails found',
+        description: 'Try adjusting your search query or clearing the filter.'
+      }
+    }
+    if (folder === 'sent') {
+      return {
+        title: 'No sent messages yet',
+        description: 'Emails sent via the client will be saved to your S3 bucket under the sent/ folder.'
+      }
+    }
+    if (folder === 'trash') {
+      return {
+        title: 'Trash is empty',
+        description: 'Deleted messages will appear in this folder.'
+      }
+    }
+    return {
+      title: 'No email objects found in bucket',
+      description: `Bucket "${config?.bucket}" appears to have no incoming objects under prefix "${config?.prefix || '/'}"`
+    }
+  }
+
+  const emptyInfo = getEmptyStateDetails()
+
   // Not Configured State
   if (!isConfigured) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4 shadow-xl">
+      <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-950 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mb-4">
           <FolderOpen className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-slate-100 mb-2">Configure S3 Credentials</h2>
-        <p className="text-sm text-slate-400 max-w-md mb-6 leading-relaxed">
-          Connect your AWS S3 bucket containing raw email files (<code className="text-indigo-300 font-mono text-xs">.eml</code>, MIME text).
+        <h2 className="text-lg font-bold text-slate-100 mb-2">AWS S3 Not Configured</h2>
+        <p className="text-xs text-slate-400 max-w-md mb-6 leading-relaxed">
+          Please configure your AWS S3 bucket name, region, and access credentials in the Settings modal to start listing emails.
         </p>
         <button
           onClick={onOpenSettings}
-          className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm shadow-lg shadow-indigo-600/30 transition cursor-pointer"
+          className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold text-xs shadow-lg shadow-indigo-600/30 transition cursor-pointer"
         >
-          Open AWS Settings
+          Configure AWS S3
         </button>
       </div>
     )
@@ -138,15 +170,15 @@ export const EmailList: React.FC<EmailListProps> = ({
   // Error State
   if (error && !loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mb-4 shadow-xl">
+      <div className="h-full flex flex-col items-center justify-center p-8 bg-slate-950 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mb-4">
           <AlertCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-lg font-bold text-slate-100 mb-2">Unable to Read S3 Bucket</h2>
-        <p className="text-sm text-rose-300/90 max-w-lg mb-6 leading-relaxed bg-rose-950/40 p-4 rounded-xl border border-rose-900/50 font-mono text-xs text-left overflow-auto max-h-40">
+        <h2 className="text-lg font-bold text-slate-100 mb-2">Failed to Fetch S3 Emails</h2>
+        <p className="text-xs text-rose-300 max-w-lg mb-6 bg-rose-950/40 p-4 rounded-xl border border-rose-900/50 font-mono leading-relaxed">
           {error}
         </p>
-        <div className="flex gap-3">
+        <div className="flex items-center gap-3">
           <button
             onClick={onRefresh}
             className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs transition cursor-pointer"
@@ -167,13 +199,17 @@ export const EmailList: React.FC<EmailListProps> = ({
   return (
     <div className="flex-1 flex flex-col overflow-hidden bg-slate-950">
       {/* Top Search & Filter Bar */}
-      <div className="px-6 py-3 border-b border-slate-800/80 bg-slate-900/40 flex items-center justify-between gap-4">
+      <div className="px-6 py-3 border-b border-slate-800/80 bg-slate-900/40 flex items-center justify-between gap-4 shrink-0">
         {/* Search input */}
         <div className="relative flex-1 max-w-md">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder="Search by sender, subject, filename, or date..."
+            placeholder={
+              folder === 'sent'
+                ? 'Search by recipient, subject, or date...'
+                : 'Search by sender, subject, filename, or date...'
+            }
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-9 pr-8 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-100 placeholder-slate-500 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 transition"
@@ -218,14 +254,16 @@ export const EmailList: React.FC<EmailListProps> = ({
         ) : filteredEmails.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center p-8 text-center">
             <Mail className="w-12 h-12 text-slate-600 mb-3" />
-            <h3 className="text-base font-semibold text-slate-300 mb-1">
-              {searchQuery ? 'No matching emails found' : 'No email objects found in bucket'}
-            </h3>
-            <p className="text-xs text-slate-500 max-w-sm">
-              {searchQuery
-                ? 'Try adjusting your search query or clearing the filter.'
-                : `Bucket "${config?.bucket}" appears to have no objects under prefix "${config?.prefix || '/'}"`}
-            </p>
+            <h3 className="text-base font-semibold text-slate-300 mb-1">{emptyInfo.title}</h3>
+            <p className="text-xs text-slate-500 max-w-sm">{emptyInfo.description}</p>
+            {folder === 'sent' && onCompose && (
+              <button
+                onClick={onCompose}
+                className="mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md transition cursor-pointer"
+              >
+                Compose New Email
+              </button>
+            )}
           </div>
         ) : (
           <table className="w-full text-left border-collapse text-xs">
@@ -236,7 +274,7 @@ export const EmailList: React.FC<EmailListProps> = ({
                   className="py-3 px-4 cursor-pointer hover:text-slate-200 transition"
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>Sender</span>
+                    <span>{folder === 'sent' ? 'To / Recipient' : 'Sender'}</span>
                     <ArrowUpDown className="w-3 h-3 text-slate-500" />
                   </div>
                 </th>
@@ -269,26 +307,32 @@ export const EmailList: React.FC<EmailListProps> = ({
                     <ArrowUpDown className="w-3 h-3 text-slate-500" />
                   </div>
                 </th>
-                <th className="py-3 px-4 text-right w-24">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
               {filteredEmails.map((email) => {
-                const initial = email.from.replace(/["'<]/g, '').trim()[0]?.toUpperCase() || 'M'
+                const displayName = folder === 'sent' ? email.to || email.from : email.from
+                const initial = displayName.replace(/["'<]/g, '').trim()[0]?.toUpperCase() || 'M'
                 return (
                   <tr
                     key={email.key}
-                    onDoubleClick={() => onSelectEmail(email.key)}
-                    className="hover:bg-slate-900/80 active:bg-slate-800/80 transition-colors cursor-pointer group"
+                    onClick={() => onSelectEmail(email.key)}
+                    className="hover:bg-slate-900 active:bg-slate-800/80 transition-colors cursor-pointer group"
                   >
-                    {/* Sender */}
+                    {/* Sender or Recipient */}
                     <td className="py-3.5 px-4 font-medium text-slate-200 max-w-xs">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 text-indigo-300 flex items-center justify-center font-bold text-xs shrink-0">
+                        <div
+                          className={`w-7 h-7 rounded-full border flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                            folder === 'sent'
+                              ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300 group-hover:border-emerald-500/60 group-hover:text-emerald-200'
+                              : 'bg-slate-800 border-slate-700 text-indigo-300 group-hover:border-indigo-500/50 group-hover:text-indigo-200'
+                          }`}
+                        >
                           {initial}
                         </div>
-                        <span className="truncate" title={email.from}>
-                          {email.from}
+                        <span className="truncate group-hover:text-white transition-colors" title={displayName}>
+                          {displayName}
                         </span>
                       </div>
                     </td>
@@ -296,7 +340,10 @@ export const EmailList: React.FC<EmailListProps> = ({
                     {/* Subject */}
                     <td className="py-3.5 px-4 text-slate-300 max-w-md">
                       <div className="flex flex-col">
-                        <span className="font-medium text-slate-100 truncate" title={email.subject}>
+                        <span
+                          className="font-medium text-slate-100 truncate group-hover:text-indigo-300 transition-colors"
+                          title={email.subject}
+                        >
                           {email.subject}
                         </span>
                       </div>
@@ -319,21 +366,6 @@ export const EmailList: React.FC<EmailListProps> = ({
                           {formatBytes(email.size)}
                         </span>
                       </div>
-                    </td>
-
-                    {/* Action Button */}
-                    <td className="py-3.5 px-4 text-right whitespace-nowrap">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onSelectEmail(email.key)
-                        }}
-                        title="Open email in new window"
-                        className="px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-indigo-600 hover:text-white text-slate-300 border border-slate-700/60 hover:border-transparent transition flex items-center gap-1.5 text-xs font-medium cursor-pointer shadow-sm"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Open</span>
-                      </button>
                     </td>
                   </tr>
                 )

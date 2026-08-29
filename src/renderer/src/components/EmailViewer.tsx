@@ -17,11 +17,16 @@ import {
   Code,
   Globe,
   AlignLeft,
-  Users
+  Users,
+  Reply,
+  ReplyAll,
+  Forward
 } from 'lucide-react'
 import { HtmlEmailViewer } from './HtmlEmailViewer'
 import { AttachmentList } from './AttachmentList'
-import type { EmailDetail } from '../types'
+import { EmailComposer, EmailComposerInitialData } from './EmailComposer'
+import { SettingsModal } from './SettingsModal'
+import type { EmailDetail, AppConfig } from '../types'
 
 interface EmailViewerProps {
   emailKey?: string
@@ -61,6 +66,12 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [activeTab, setActiveTab] = useState<'html' | 'text' | 'raw'>('html')
 
+  // Composer & Settings modals state
+  const [composerData, setComposerData] = useState<EmailComposerInitialData | null>(null)
+  const [isComposerOpen, setIsComposerOpen] = useState<boolean>(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false)
+  const [currentConfig, setCurrentConfig] = useState<AppConfig | null>(null)
+
   const contentRef = useRef<HTMLPreElement>(null)
 
   // Extract key from prop or window hash
@@ -75,7 +86,7 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
     setKey(extractedKey)
   }, [propKey])
 
-  // Fetch full email content
+  // Fetch full email content and configuration
   useEffect(() => {
     if (!key) return
     let isMounted = true
@@ -86,6 +97,12 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
       setError('Electron API bridge is not available. Please ensure the app is running within Electron.')
       setLoading(false)
       return
+    }
+
+    if (window.electronAPI.getConfig) {
+      window.electronAPI.getConfig().then((cfg) => {
+        if (isMounted) setCurrentConfig(cfg)
+      })
     }
 
     window.electronAPI
@@ -118,6 +135,73 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
       isMounted = false
     }
   }, [key])
+
+  // Reply handler
+  const handleReply = () => {
+    if (!email) return
+    const sender = email.parsed?.replyTo || email.from
+    const cleanSubject = email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`
+    const msgId = email.parsed?.messageId || email.headers['message-id']
+    const bodyQuote = `\n\nOn ${formatDate(email.date)}, ${email.from} wrote:\n> ${(email.parsed?.text || email.rawContent || '').split('\n').join('\n> ')}`
+
+    setComposerData({
+      mode: 'reply',
+      to: [sender],
+      subject: cleanSubject,
+      textBody: bodyQuote,
+      inReplyTo: msgId,
+      references: msgId
+    })
+    setIsComposerOpen(true)
+  }
+
+  // Reply All handler
+  const handleReplyAll = () => {
+    if (!email) return
+    const sender = email.parsed?.replyTo || email.from
+    const cleanSubject = email.subject.startsWith('Re:') ? email.subject : `Re: ${email.subject}`
+    const msgId = email.parsed?.messageId || email.headers['message-id']
+    const bodyQuote = `\n\nOn ${formatDate(email.date)}, ${email.from} wrote:\n> ${(email.parsed?.text || email.rawContent || '').split('\n').join('\n> ')}`
+
+    // Extract all To and CC recipients excluding the user's sender address
+    const allRecipients = [
+      ...(email.to ? email.to.split(/[,;]/).map((s) => s.trim()) : []),
+      ...(email.parsed?.cc ? email.parsed.cc.split(/[,;]/).map((s) => s.trim()) : [])
+    ].filter((addr) => addr && !addr.includes(sender))
+
+    setComposerData({
+      mode: 'replyAll',
+      to: [sender],
+      cc: allRecipients,
+      subject: cleanSubject,
+      textBody: bodyQuote,
+      inReplyTo: msgId,
+      references: msgId
+    })
+    setIsComposerOpen(true)
+  }
+
+  // Forward handler
+  const handleForward = () => {
+    if (!email) return
+    const cleanSubject = email.subject.startsWith('Fwd:') ? email.subject : `Fwd: ${email.subject}`
+    const forwardedHeader = `\n\n---------- Forwarded message ---------\nFrom: ${email.from}\nDate: ${formatDate(email.date)}\nSubject: ${email.subject}\nTo: ${email.to}\n\n${email.parsed?.text || ''}`
+
+    const originalAttachments = (email.parsed?.attachments || []).map((a) => ({
+      filename: a.filename,
+      contentBase64: a.contentBase64,
+      contentType: a.contentType
+    }))
+
+    setComposerData({
+      mode: 'forward',
+      to: [],
+      subject: cleanSubject,
+      textBody: forwardedHeader,
+      attachments: originalAttachments
+    })
+    setIsComposerOpen(true)
+  }
 
   // Copy raw content
   const handleCopy = async () => {
@@ -214,9 +298,41 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
 
       {/* Header Summary Card */}
       <div className="bg-slate-900/80 border-b border-slate-800/80 p-5 shrink-0">
-        <h1 className="text-lg font-bold text-slate-100 mb-3 select-text leading-snug">
-          {email.subject || '(No Subject)'}
-        </h1>
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <h1 className="text-lg font-bold text-slate-100 select-text leading-snug flex-1">
+            {email.subject || '(No Subject)'}
+          </h1>
+
+          {/* Email Action Buttons (Reply / Reply All / Forward) */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={handleReply}
+              title="Reply to sender"
+              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-slate-700/60 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Reply className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Reply</span>
+            </button>
+
+            <button
+              onClick={handleReplyAll}
+              title="Reply to all recipients"
+              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-slate-700/60 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <ReplyAll className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Reply All</span>
+            </button>
+
+            <button
+              onClick={handleForward}
+              title="Forward this email"
+              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 active:bg-slate-600 text-slate-200 border border-slate-700/60 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+            >
+              <Forward className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Forward</span>
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-y-2 gap-x-6 text-xs">
           {/* Sender */}
@@ -397,6 +513,8 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
         {activeTab === 'text' && (
           <div className="flex-1 overflow-auto p-6 bg-slate-950 flex flex-col">
             <div className="w-full flex-1 bg-slate-900/90 border border-slate-800/80 rounded-2xl p-6 shadow-xl text-slate-200 text-sm leading-relaxed whitespace-pre-wrap break-words font-sans">
+              {email.parsed?.text || 'No plain text content available.'}
+            </div>
           </div>
         )}
 
@@ -413,6 +531,28 @@ export const EmailViewer: React.FC<EmailViewerProps> = ({ emailKey: propKey }) =
           </div>
         )}
       </div>
+
+      {/* Mounted Email Composer Modal */}
+      <EmailComposer
+        isOpen={isComposerOpen}
+        onClose={() => setIsComposerOpen(false)}
+        initialData={composerData}
+        onOpenSmtpSettings={() => setIsSettingsOpen(true)}
+      />
+
+      {/* Mounted Settings Modal */}
+      {currentConfig && (
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          initialTab="smtp"
+          onClose={() => setIsSettingsOpen(false)}
+          currentConfig={currentConfig}
+          onSaveSuccess={(cfg) => {
+            setCurrentConfig(cfg)
+            setIsSettingsOpen(false)
+          }}
+        />
+      )}
     </div>
   )
 }

@@ -61,25 +61,39 @@ Phase 5: MIME Parsing Engine & Rich Rendering
     - [x] Inline CID images resolution
 
 ================================================================================
-Phase 6: SMTP Configuration & Email Sending (Current Phase)
+Phase 6: SMTP Configuration & Email Sending
 ================================================================================
-- [ ] Add optional SMTP Configuration tab to Settings Modal:
-    - [ ] SMTP Host / Server
-    - [ ] SMTP Port (e.g. 587, 465, 25)
-    - [ ] Secure Connection (SSL/TLS vs STARTTLS)
-    - [ ] Username
-    - [ ] Password
-    - [ ] Default "From" Sender Name and Email Address
-    - [ ] "Test SMTP Connection" button with live status feedback
-- [ ] Implement SMTP Service (`nodemailer`) and IPC handlers in Main process (`smtp:test`, `smtp:send`)
-- [ ] Build Email Composer Component:
-    - [ ] Compose from scratch ("New Email" button on Main window header)
-    - [ ] "Reply" action on opened email (pre-populates To, Subject "Re: ...", In-Reply-To header, quoted text)
-    - [ ] "Reply to All" action on opened email (pre-populates To, CCs, Subject, quoted text)
-    - [ ] "Forward" action on opened email (pre-populates Subject "Fwd: ...", forwarded header block, attachments)
-    - [ ] Attachment picker & drag-and-drop for outgoing emails
-    - [ ] Sending progress, success confirmation, and error alerts
-    - [ ] Validation preventing sending if SMTP is not configured
+- [x] Add optional SMTP Configuration tab to Settings Modal:
+    - [x] SMTP Host / Server
+    - [x] SMTP Port (e.g. 587, 465, 25)
+    - [x] Secure Connection (SSL/TLS vs STARTTLS)
+    - [x] Username
+    - [x] Password
+    - [x] Default "From" Sender Name and Email Address
+    - [x] "Test SMTP Connection" button with live status feedback
+- [x] Implement SMTP Service (`nodemailer`) and IPC handlers in Main process (`smtp:test`, `smtp:send`)
+- [x] Build Email Composer Component:
+    - [x] Compose from scratch ("New Email" button on Main window header)
+    - [x] "Reply" action on opened email (pre-populates To, Subject "Re: ...", In-Reply-To header, quoted text)
+    - [x] "Reply to All" action on opened email (pre-populates To, CCs, Subject, quoted text)
+    - [x] "Forward" action on opened email (pre-populates Subject "Fwd: ...", forwarded header block, attachments)
+    - [x] Attachment picker & drag-and-drop for outgoing emails
+    - [x] Sending progress, success confirmation, and error alerts
+    - [x] Validation preventing sending if SMTP is not configured
+
+================================================================================
+Phase 7: Folder Navigation & S3 Sent Mail Storage
+================================================================================
+- [x] Add Left Navigation Sidebar:
+    - [x] "Inbox" folder view (shows incoming emails; filters out `sent/` and `trash/` prefixes)
+    - [x] "Sent" folder view (lists sent emails stored in S3 under `sent/` prefix)
+    - [x] "Trash / Deleted" folder placeholder (for future deletion workflow)
+    - [x] Message counter / badges per folder
+- [x] Save Sent Emails to S3 Bucket upon SMTP transmission:
+    - [x] Generate standard RFC 822 / `.eml` raw message content from outgoing email payload
+    - [x] Upload to S3 bucket under `sent/` prefix (e.g. `sent/<timestamp>_<messageId>.eml`)
+    - [x] Exclude `sent/` folder objects when listing the Inbox
+- [x] Dynamic folder switching & cached email lists per folder
 
 ================================================================================
 Future Roadmap

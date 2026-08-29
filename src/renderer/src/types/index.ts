@@ -1,4 +1,16 @@
-export interface AwsConfig {
+export type FolderType = 'inbox' | 'sent' | 'trash'
+
+export interface SmtpConfig {
+  host: string
+  port: number
+  secure: boolean
+  user: string
+  password: string
+  fromName?: string
+  fromEmail?: string
+}
+
+export interface AppConfig {
   bucket: string
   region: string
   accessKeyId: string
@@ -6,7 +18,10 @@ export interface AwsConfig {
   sessionToken?: string
   prefix?: string
   maxKeys?: number
+  smtp?: SmtpConfig
 }
+
+export type AwsConfig = AppConfig
 
 export interface EmailHeader {
   from?: string
@@ -22,6 +37,7 @@ export interface EmailSummary {
   lastModified: string
   eTag?: string
   from: string
+  to?: string
   subject: string
   date: string
   isParsedHeader?: boolean
@@ -72,6 +88,11 @@ export interface TestConnectionResult {
   message?: string
 }
 
+export interface TestSmtpResult {
+  success: boolean
+  message?: string
+}
+
 export interface ListEmailsResult {
   success: boolean
   data?: EmailSummary[]
@@ -91,12 +112,37 @@ export interface SaveAttachmentResult {
   error?: string
 }
 
+export interface OutgoingEmailPayload {
+  to: string[]
+  cc?: string[]
+  bcc?: string[]
+  subject: string
+  textBody?: string
+  htmlBody?: string
+  inReplyTo?: string
+  references?: string
+  attachments?: Array<{
+    filename: string
+    contentBase64: string
+    contentType: string
+  }>
+}
+
+export interface SendEmailResult {
+  success: boolean
+  messageId?: string
+  s3Key?: string
+  error?: string
+}
+
 export interface ElectronAPI {
-  getConfig: () => Promise<AwsConfig>
-  saveConfig: (config: AwsConfig) => Promise<{ success: boolean; message?: string }>
-  testConnection: (config?: AwsConfig) => Promise<TestConnectionResult>
-  listEmails: (options?: { prefix?: string; maxKeys?: number }) => Promise<ListEmailsResult>
+  getConfig: () => Promise<AppConfig>
+  saveConfig: (config: AppConfig) => Promise<{ success: boolean; message?: string }>
+  testConnection: (config?: AppConfig) => Promise<TestConnectionResult>
+  testSmtpConnection: (smtpConfig: SmtpConfig) => Promise<TestSmtpResult>
+  listEmails: (options?: { prefix?: string; maxKeys?: number; folder?: FolderType }) => Promise<ListEmailsResult>
   getEmailContent: (key: string) => Promise<EmailContentResult>
+  sendEmail: (payload: OutgoingEmailPayload) => Promise<SendEmailResult>
   openEmailViewer: (key: string) => Promise<void>
   getConfigPath: () => Promise<string>
   saveAttachment: (payload: {

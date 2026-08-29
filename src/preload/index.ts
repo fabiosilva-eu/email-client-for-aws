@@ -1,17 +1,18 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import type { AwsConfig, ElectronAPI } from '../renderer/src/types'
+import type { AppConfig, ElectronAPI, FolderType, OutgoingEmailPayload, SmtpConfig } from '../renderer/src/types'
 
 const api: ElectronAPI = {
   getConfig: () => ipcRenderer.invoke('config:get'),
-  saveConfig: (config: AwsConfig) => ipcRenderer.invoke('config:save', config),
-  testConnection: (config?: AwsConfig) => ipcRenderer.invoke('s3:testConnection', config),
-  listEmails: (options?: { prefix?: string; maxKeys?: number }) =>
+  saveConfig: (config: AppConfig) => ipcRenderer.invoke('config:save', config),
+  testConnection: (config?: AppConfig) => ipcRenderer.invoke('s3:testConnection', config),
+  testSmtpConnection: (smtpConfig: SmtpConfig) => ipcRenderer.invoke('smtp:test', smtpConfig),
+  listEmails: (options?: { prefix?: string; maxKeys?: number; folder?: FolderType }) =>
     ipcRenderer.invoke('s3:listEmails', options),
   getEmailContent: (key: string) => ipcRenderer.invoke('s3:getEmailContent', key),
+  sendEmail: (payload: OutgoingEmailPayload) => ipcRenderer.invoke('smtp:send', payload),
   openEmailViewer: (key: string) => ipcRenderer.invoke('window:openViewer', key),
   getConfigPath: () => ipcRenderer.invoke('config:getPath'),
   saveAttachment: (payload) => ipcRenderer.invoke('attachment:save', payload)
 }
 
 contextBridge.exposeInMainWorld('electronAPI', api)
-

@@ -1,7 +1,9 @@
 import { app, BrowserWindow, ipcMain, Menu, MenuItemConstructorOptions } from 'electron'
 import { getConfig, saveConfig, getConfigPath, AwsConfig } from './config'
 import { testS3Connection, listS3Emails, getS3EmailContent, saveAttachmentToDisk } from './s3'
+import { testSmtpConnection, sendSmtpEmail } from './smtp'
 import { createMainWindow, createViewerWindow } from './windows'
+import type { OutgoingEmailPayload, SmtpConfig } from '../renderer/src/types'
 
 // Handle rendering color quirks
 app.commandLine.appendSwitch('disable-color-correct-rendering')
@@ -97,27 +99,29 @@ function registerIpcHandlers() {
     return testS3Connection(config)
   })
 
-  ipcMain.handle('s3:listEmails', async (_, options?: { prefix?: string; maxKeys?: number }) => {
-    return listS3Emails(options)
-  })
+  ipcMain.handle(
+    's3:listEmails',
+    async (_, options?: { prefix?: string; maxKeys?: number; folder?: any }) => {
+      return listS3Emails(options)
+    }
+  )
 
   ipcMain.handle('s3:getEmailContent', async (_, key: string) => {
     return getS3EmailContent(key)
   })
 
-  ipcMain.handle(
-    'attachment:save',
-    async (
-      _,
-      payload: {
-        filename: string
-        contentBase64: string
-        contentType: string
-      }
-    ) => {
-      return saveAttachmentToDisk(payload)
-    }
-  )
+  ipcMain.handle('attachment:save', async (_, payload: { filename: string; contentBase64: string; contentType: string }) => {
+    return saveAttachmentToDisk(payload)
+  })
+
+  // SMTP handlers
+  ipcMain.handle('smtp:test', async (_, smtpConfig: SmtpConfig) => {
+    return testSmtpConnection(smtpConfig)
+  })
+
+  ipcMain.handle('smtp:send', async (_, payload: OutgoingEmailPayload) => {
+    return sendSmtpEmail(payload)
+  })
 
   // Window management handlers
   ipcMain.handle('window:openViewer', async (_, key: string) => {

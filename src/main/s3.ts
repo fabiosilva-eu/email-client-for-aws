@@ -2,13 +2,14 @@ import {
   S3Client,
   ListObjectsV2Command,
   GetObjectCommand,
-  HeadBucketCommand
+  HeadBucketCommand,
+  PutObjectCommand
 } from '@aws-sdk/client-s3'
 import { dialog } from 'electron'
 import fs from 'node:fs'
 import { AwsConfig, getConfig } from './config'
 import { parseMimeEmail } from './parser'
-import type { ParsedEmail, SaveAttachmentResult } from '../renderer/src/types'
+import type { ParsedEmail, SaveAttachmentResult, FolderType } from '../renderer/src/types'
 
 export interface ParsedHeaders {
   headers: Record<string, string>
@@ -25,6 +26,7 @@ export interface EmailSummaryItem {
   lastModified: string
   eTag?: string
   from: string
+  to?: string
   subject: string
   date: string
   isParsedHeader?: boolean
@@ -191,7 +193,14 @@ export async function testS3Connection(customConfig?: AwsConfig): Promise<{ succ
 /**
  * List email objects from S3 and extract header summaries
  */
-export async function listS3Emails(options?: { prefix?: string; maxKeys?: number }): Promise<{
+/**
+ * List email objects from S3 and extract header summaries with folder filtering
+ */
+export async function listS3Emails(options?: {
+  prefix?: string
+  maxKeys?: number
+  folder?: FolderType
+}): Promise<{
   success: boolean
   data?: EmailSummaryItem[]
   error?: string
@@ -203,17 +212,44 @@ export async function listS3Emails(options?: { prefix?: string; maxKeys?: number
     }
 
     const client = createS3Client(cfg)
-    const prefix = options?.prefix !== undefined ? options.prefix : (cfg.prefix || '')
+    const folder = options?.folder || 'inbox'
+
+    // Determine query prefix based on folder
+    let queryPrefix: string | undefined
+    if (folder === 'sent') {
+      queryPrefix = 'sent/'
+    } else if (folder === 'trash') {
+      queryPrefix = 'trash/'
+    } else {
+      // Inbox: use configured prefix or root
+      const customPrefix = options?.prefix !== undefined ? options.prefix : (cfg.prefix || '')
+      queryPrefix = customPrefix.trim() || undefined
+    }
+
     const maxKeys = options?.maxKeys || cfg.maxKeys || 100
 
     const listCmd = new ListObjectsV2Command({
       Bucket: cfg.bucket.trim(),
-      Prefix: prefix.trim() || undefined,
+      Prefix: queryPrefix,
       MaxKeys: maxKeys
     })
 
     const listResponse = await client.send(listCmd)
-    const contents = listResponse.Contents || []
+    let contents = listResponse.Contents || []
+
+    // Filter out folder markers (e.g. key === 'sent/' or 'trash/')
+    contents = contents.filter((item) => {
+      const k = item.Key || ''
+      if (k === 'sent/' || k === 'trash/' || k.endsWith('/')) return false
+
+      if (folder === 'inbox') {
+        // Exclude sent and trash objects from the inbox view
+        if (k.startsWith('sent/') || k.startsWith('trash/') || k.startsWith('deleted/')) {
+          return false
+        }
+      }
+      return true
+    })
 
     // Sort objects by LastModified descending
     contents.sort((a, b) => {
@@ -231,6 +267,7 @@ export async function listS3Emails(options?: { prefix?: string; maxKeys?: number
         const eTag = item.ETag
 
         let from = '(No Sender)'
+        let to = ''
         let subject = '(No Subject)'
         let headerDate = ''
         let isParsedHeader = false
@@ -245,10 +282,11 @@ export async function listS3Emails(options?: { prefix?: string; maxKeys?: number
               Range: rangeHeader
             })
             const headerObj = await client.send(getHeaderCmd)
-            const chunkStr = await headerObj.Body?.transformToString('utf-8') || ''
+            const chunkStr = (await headerObj.Body?.transformToString('utf-8')) || ''
             if (chunkStr) {
               const parsed = parseRawEmailHeaders(chunkStr)
               from = parsed.from
+              to = parsed.to
               subject = parsed.subject
               headerDate = parsed.date
               isParsedHeader = true
@@ -265,6 +303,7 @@ export async function listS3Emails(options?: { prefix?: string; maxKeys?: number
           lastModified,
           eTag,
           from,
+          to,
           subject,
           date: headerDate || lastModified,
           isParsedHeader
@@ -276,6 +315,36 @@ export async function listS3Emails(options?: { prefix?: string; maxKeys?: number
   } catch (error: any) {
     const message = error?.message || 'Failed to list emails from S3.'
     return { success: false, error: message }
+  }
+}
+
+/**
+ * Save raw email content to S3 (e.g. for storing sent emails under sent/ prefix)
+ */
+export async function saveEmailToS3(
+  key: string,
+  content: Buffer | string,
+  contentType = 'message/rfc822'
+): Promise<{ success: boolean; key?: string; error?: string }> {
+  try {
+    const cfg = getConfig()
+    if (!cfg.bucket) {
+      return { success: false, error: 'S3 Bucket is not configured.' }
+    }
+
+    const client = createS3Client(cfg)
+    const putCmd = new PutObjectCommand({
+      Bucket: cfg.bucket.trim(),
+      Key: key,
+      Body: content,
+      ContentType: contentType
+    })
+
+    await client.send(putCmd)
+    return { success: true, key }
+  } catch (error: any) {
+    console.error(`Failed to save email to S3 at "${key}":`, error)
+    return { success: false, error: error?.message || 'Failed to save email to S3.' }
   }
 }
 

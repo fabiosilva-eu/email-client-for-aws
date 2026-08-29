@@ -1,13 +1,18 @@
 {
   "name": "s3-email-client",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Cross-platform S3 Email Viewer Desktop App",
   "main": "dist-electron/main/index.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dist": "npm run build && electron-builder",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux",
+    "dist:all": "npm run build && electron-builder -mwl"
   },
   "keywords": [
     "electron",
@@ -40,10 +45,47 @@
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^34.2.0",
+    "electron-builder": "^26.15.3",
     "tailwindcss": "^4.0.9",
     "typescript": "^5.7.3",
     "vite": "^6.2.0",
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6"
+  },
+  "build": {
+    "appId": "com.s3emailclient.app",
+    "productName": "S3 Email Client",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "tar.gz"
+      ],
+      "category": "Network"
+    }
   }
 }

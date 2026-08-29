@@ -127,9 +127,8 @@ npm run dev
 # Run TypeScript typecheck
 npm run typecheck
 
-# Build for production
-npm run build
-```
+# Build frontend and Electron scripts
+
 
 ---
 
@@ -137,11 +136,15 @@ npm run build
 
 | Channel Name | Direction | Payload | Return Value | Purpose |
 | :--- | :--- | :--- | :--- | :--- |
-| `config:get` | Renderer $\rightarrow$ Main | None | `AwsConfig` | Read local `config.json` |
-| `config:save` | Renderer $\rightarrow$ Main | `AwsConfig` | `{ success: boolean }` | Persist config to disk |
-| `s3:testConnection` | Renderer $\rightarrow$ Main | `AwsConfig` | `{ success: boolean, message?: string }` | Verify AWS credentials |
+| `config:get` | Renderer $\rightarrow$ Main | None | `AppConfig` | Read local `config.json` |
+| `config:save` | Renderer $\rightarrow$ Main | `AppConfig` | `{ success: boolean }` | Persist config to disk |
+| `config:getPath` | Renderer $\rightarrow$ Main | None | `string` | Get path to local `config.json` |
+| `s3:testConnection` | Renderer $\rightarrow$ Main | `AppConfig` | `{ success: boolean, message?: string }` | Verify AWS credentials |
 | `s3:listEmails` | Renderer $\rightarrow$ Main | `{ prefix?: string, maxKeys?: number }` | `EmailSummary[]` | List objects & parse headers |
-| `s3:getEmailContent` | Renderer $\rightarrow$ Main | `{ key: string }` | `EmailDetail` | Get full raw object content |
+| `s3:getEmailContent` | Renderer $\rightarrow$ Main | `{ key: string }` | `EmailDetail` | Get full parsed and raw object content |
+| `attachment:save` | Renderer $\rightarrow$ Main | `{ filename, contentBase64, contentType }` | `SaveAttachmentResult` | Save attachment via native dialog |
+| `smtp:test` | Renderer $\rightarrow$ Main | `SmtpConfig` | `{ success: boolean, message?: string }` | Verify SMTP connection |
+| `smtp:send` | Renderer $\rightarrow$ Main | `OutgoingEmailPayload` | `SendEmailResult` | Send email via SMTP (`nodemailer`) |
 | `window:openViewer` | Renderer $\rightarrow$ Main | `{ key: string }` | `void` | Open standalone viewer window |
 
 ---
@@ -158,7 +161,16 @@ The configuration is stored locally at `~/.config/s3-email-client/config.json` (
   "secretAccessKey": "...",
   "sessionToken": "",
   "prefix": "incoming/",
-  "maxKeys": 100
+  "maxKeys": 100,
+  "smtp": {
+    "host": "email-smtp.eu-west-1.amazonaws.com",
+    "port": 587,
+    "secure": false,
+    "user": "smtp-user",
+    "password": "smtp-password",
+    "fromName": "Fabio Silva",
+    "fromEmail": "me@fabiosilva.eu"
+  }
 }
 ```
 
@@ -167,8 +179,8 @@ The configuration is stored locally at `~/.config/s3-email-client/config.json` (
 ## 8. Coding & Contribution Conventions for Agents
 
 1. **State Management**: Use React hooks (`useState`, `useEffect`, `useCallback`) for local UI state. Keep IPC calls encapsulated in custom hooks or clean helper functions.
-2. **Error Handling**: AWS S3 calls must always be wrapped in `try/catch` with descriptive user-facing error messages returned to the renderer.
-3. **MIME / Raw Header Safety**: Header extraction in `src/main/s3.ts` should handle partial streams defensively (standard email header regex with fallback if headers are absent or non-standard).
+2. **Error Handling**: AWS S3 and SMTP calls must always be wrapped in `try/catch` with descriptive user-facing error messages returned to the renderer.
+3. **MIME / Raw Header Safety**: Header extraction in `src/main/s3.ts` and `src/main/parser.ts` handles MIME structures, inline CIDs, attachments, and partial header fallbacks safely.
 4. **Window State**: Ensure viewer windows clean up their event listeners when closed.
 5. **Keep TODO.txt Updated**: When completing milestones, check off tasks in [TODO.txt](file:///Users/fabiomssilva/projects/s3_email_client/TODO.txt).
 
