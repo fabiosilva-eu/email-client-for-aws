@@ -1,4 +1,4 @@
-# S3 Email Client - Developer & Agent Guide (`AGENTS.md`)
+# Email Client for AWS S3 and SES - Developer & Agent Guide (`AGENTS.md`)
 
 This document provides essential architectural context, directory structures, development workflows, and coding conventions for AI agents and human developers contributing to this repository.
 
@@ -6,7 +6,7 @@ This document provides essential architectural context, directory structures, de
 
 ## 1. Project Overview
 
-**S3 Email Client** is a cross-platform desktop application built with **Electron**, **React 19**, **Vite**, **TypeScript**, and **Tailwind CSS**. It connects directly to Amazon Web Services (AWS) S3 buckets to inspect, list, and view stored raw email messages (`.eml`, MIME multipart, or text files) without requiring a dedicated backend service or bucket CORS modifications.
+**Email Client for AWS S3 and SES** is a cross-platform desktop application built with **Electron**, **React 19**, **Vite**, **TypeScript**, and **Tailwind CSS**. It connects directly to Amazon Web Services (AWS) S3 buckets to inspect, list, and view stored raw email messages (`.eml`, MIME multipart, or text files) without requiring a dedicated backend service or bucket CORS modifications.
 
 ### Core Capabilities
 - **Direct S3 Integration**: Connects via AWS SDK v3 in the Electron main process (bypassing browser CORS limitations).

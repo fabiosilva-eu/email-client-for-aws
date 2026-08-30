@@ -59,7 +59,7 @@ export function createMainWindow(): BrowserWindow {
 
 
   mainWindow = new BrowserWindow({
-    title: 'S3 Email Client',
+    title: 'Email Client for AWS S3 and SES',
     width: 1200,
     height: 800,
     minWidth: 800,

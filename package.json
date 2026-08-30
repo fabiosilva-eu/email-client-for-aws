@@ -1,7 +1,7 @@
 {
-  "name": "s3-email-client",
+  "name": "aws-email-client",
   "version": "0.1.0",
-  "description": "Cross-platform S3 Email Viewer Desktop App",
+  "description": "Email Client for AWS S3 and SES",
   "main": "dist-electron/main/index.js",
   "type": "module",
   "scripts": {
@@ -53,8 +53,8 @@
     "vite-plugin-electron-renderer": "^0.14.6"
   },
   "build": {
-    "appId": "com.s3emailclient.app",
-    "productName": "S3 Email Client",
+    "appId": "com.awsemailclient.app",
+    "productName": "Email Client for AWS S3 and SES",
     "directories": {
       "output": "release"
     },

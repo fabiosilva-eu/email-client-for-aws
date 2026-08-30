@@ -32,7 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
         <div>
           <h1 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            S3 Email Client
+            Email Client for AWS S3 and SES
             <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
               v0.1
             </span>

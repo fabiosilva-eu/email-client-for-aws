@@ -1,4 +1,4 @@
-# S3 Email Client - Project TODO
+# Email Client for AWS S3 and SES - Project TODO
 
 ================================================================================
 Phase 1: Project Setup & Foundation

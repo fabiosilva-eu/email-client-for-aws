@@ -1,4 +1,4 @@
-# S3 Email Client
+# Email Client for AWS S3 and SES
 
 <p align="center">
   <strong>A lightweight, cross-platform desktop email client built on AWS S3 and Amazon SES.</strong><br>
@@ -34,7 +34,7 @@
 
 Traditional email hosting providers (Google Workspace, Microsoft 365, ProtonMail) charge **\$6 to \$18/month per mailbox**. If you own multiple domains or need catch-all addresses (`support@`, `billing@`, `me@`, etc.), costs scale quickly.
 
-**S3 Email Client** turns standard AWS infrastructure into a personal email server:
+**Email Client for AWS S3 and SES** turns standard AWS infrastructure into a personal email server:
 - **Inbound**: Amazon Simple Email Service (SES) receives incoming emails for your domain and writes raw `.eml` files into an Amazon S3 bucket (at ~\$0.0001 per message).
 - **Client**: This desktop app connects directly to your S3 bucket, parses MIME headers and HTML bodies, displays attachments, organizes folders, and auto-polls for new messages.
 - **Outbound**: Emails are sent via Amazon SES SMTP (or any standard SMTP server) with outgoing messages automatically saved to `s3://<bucket>/sent/`.
