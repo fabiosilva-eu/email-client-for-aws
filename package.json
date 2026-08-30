@@ -22,7 +22,7 @@
     "react",
     "vite"
   ],
-  "author": "",
+  "author": "Fabio Silva",
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.750.0",
