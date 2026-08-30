@@ -5,6 +5,8 @@ import type { AwsConfig } from '../types'
 interface HeaderProps {
   config: AwsConfig | null
   loading: boolean
+  countdownSeconds?: number | null
+  showCountdown?: boolean
   onRefresh: () => void
   onOpenSettings: () => void
   onCompose: () => void
@@ -13,6 +15,8 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   config,
   loading,
+  countdownSeconds = null,
+  showCountdown = true,
   onRefresh,
   onOpenSettings,
   onCompose
@@ -73,11 +77,21 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={onRefresh}
           disabled={loading || !isConfigured}
-          title="Refresh emails from S3"
-          className="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 text-xs font-medium cursor-pointer"
+          title={
+            showCountdown && countdownSeconds !== null
+              ? `Next auto-refresh in ${countdownSeconds}s (Click to refresh now)`
+              : 'Refresh emails from S3'
+          }
+          className="px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 active:bg-slate-700 transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5 text-xs font-medium cursor-pointer border border-transparent hover:border-slate-700"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-indigo-400' : ''}`} />
-          <span>Refresh</span>
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-indigo-400' : 'text-slate-400'}`} />
+          <span>
+            {loading
+              ? 'Refreshing...'
+              : showCountdown && countdownSeconds !== null && countdownSeconds !== undefined
+              ? `Refresh (${countdownSeconds}s)`
+              : 'Refresh'}
+          </span>
         </button>
 
         <button
@@ -92,4 +106,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   )
 }
-

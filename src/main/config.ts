@@ -14,6 +14,9 @@ const DEFAULT_CONFIG: AppConfig = {
   sessionToken: '',
   prefix: '',
   maxKeys: 100,
+  autoRefreshEnabled: true,
+  autoRefreshInterval: 60,
+  showRefreshCountdown: true,
   smtp: {
     host: '',
     port: 587,

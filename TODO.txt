@@ -111,6 +111,20 @@ Phase 8: Message Deletion & Trash Workflow
     - [x] Update folder caches and badge counters on deletion
 
 ================================================================================
+Phase 9: Automatic Background Refresh & Polling
+================================================================================
+- [x] Add Auto-Refresh Settings in Settings Modal:
+    - [x] Auto-refresh toggle (Enable / Disable). Default: Enabled
+    - [x] Configurable polling interval selector (e.g. 30s, 1m, 2m, 5m, 10m). Default: 1m (60s)
+    - [x] "Show Next Refresh Countdown on Refresh Button" toggle. Default: Enabled (true)
+    - [x] Persist `autoRefreshEnabled`, `autoRefreshInterval`, and `showRefreshCountdown` to `config.json`
+- [x] Implement Background Auto-Refresh Poller in Main Process / Renderer:
+    - [x] Periodic timer that silently checks for new S3 incoming messages
+    - [x] Updates Inbox and folder badge counts seamlessly without interrupting search or scroll position
+    - [x] Countdown timer indicator rendered directly on the header Refresh button (e.g. `Refresh (45s)`) when enabled
+    - [x] Manual refresh resets countdown timer immediately
+
+================================================================================
 Future Roadmap
 ================================================================================
 - [ ] Secure credential encryption (macOS Keychain / safeStorage / master password)

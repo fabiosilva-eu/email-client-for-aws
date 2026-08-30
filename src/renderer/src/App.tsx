@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Header } from './components/Header'
 import { Sidebar } from './components/Sidebar'
 import { SettingsModal } from './components/SettingsModal'
@@ -39,7 +39,10 @@ const MainWindow: React.FC = () => {
     secretAccessKey: '',
     sessionToken: '',
     prefix: '',
-    maxKeys: 100
+    maxKeys: 100,
+    autoRefreshEnabled: true,
+    autoRefreshInterval: 60,
+    showRefreshCountdown: true
   })
   const [activeFolder, setActiveFolder] = useState<FolderType>('inbox')
   const [folderCache, setFolderCache] = useState<Record<FolderType, EmailSummary[]>>({
@@ -62,6 +65,9 @@ const MainWindow: React.FC = () => {
   // Delete modal state
   const [deleteTarget, setDeleteTarget] = useState<{ key: string; subject: string } | null>(null)
   const [isDeleting, setIsDeleting] = useState<boolean>(false)
+
+  // Auto-refresh countdown state
+  const [countdown, setCountdown] = useState<number>(60)
 
   // Fetch emails for a specific folder from S3
   const fetchFolderEmails = useCallback(
@@ -110,9 +116,9 @@ const MainWindow: React.FC = () => {
 
   // Refresh current folder and background update other folder counts
   const refreshAllFolders = useCallback(
-    async (currentCfg?: AppConfig) => {
+    async (currentCfg?: AppConfig, isBackground = false) => {
       const activeCfg = currentCfg || config
-      await fetchFolderEmails(activeFolder, activeCfg, false)
+      await fetchFolderEmails(activeFolder, activeCfg, isBackground)
       // Fetch other folder counts in the background
       if (activeFolder !== 'inbox') fetchFolderEmails('inbox', activeCfg, true)
       if (activeFolder !== 'sent') fetchFolderEmails('sent', activeCfg, true)
@@ -120,6 +126,49 @@ const MainWindow: React.FC = () => {
     },
     [activeFolder, config, fetchFolderEmails]
   )
+
+  // Keep a stable ref for refreshAllFolders to use inside timer interval
+  const refreshAllFoldersRef = useRef(refreshAllFolders)
+  useEffect(() => {
+    refreshAllFoldersRef.current = refreshAllFolders
+  }, [refreshAllFolders])
+
+  // Is auto-refresh actively enabled
+  const isAutoRefreshActive = Boolean(
+    config.autoRefreshEnabled !== false &&
+    config.bucket &&
+    config.accessKeyId &&
+    config.secretAccessKey
+  )
+
+  // Reset countdown whenever auto-refresh settings change
+  useEffect(() => {
+    setCountdown(config.autoRefreshInterval || 60)
+  }, [config.autoRefreshInterval, config.autoRefreshEnabled])
+
+  // Background auto-refresh timer ticker
+  useEffect(() => {
+    if (!isAutoRefreshActive) return
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          // Trigger silent background poll
+          refreshAllFoldersRef.current(undefined, true)
+          return config.autoRefreshInterval || 60
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [isAutoRefreshActive, config.autoRefreshInterval])
+
+  // Manual refresh resets countdown
+  const handleManualRefresh = () => {
+    setCountdown(config.autoRefreshInterval || 60)
+    refreshAllFolders(config, false)
+  }
 
   // Handle switching folders
   const handleSelectFolder = (folder: FolderType) => {
@@ -171,6 +220,9 @@ const MainWindow: React.FC = () => {
       window.electronAPI.getConfig().then((loadedConfig) => {
         if (loadedConfig) {
           setConfig(loadedConfig)
+          if (loadedConfig.autoRefreshInterval) {
+            setCountdown(loadedConfig.autoRefreshInterval)
+          }
           if (loadedConfig.bucket && loadedConfig.accessKeyId && loadedConfig.secretAccessKey) {
             refreshAllFolders(loadedConfig)
           } else {
@@ -185,6 +237,7 @@ const MainWindow: React.FC = () => {
 
   const handleSaveSettings = (updated: AppConfig) => {
     setConfig(updated)
+    setCountdown(updated.autoRefreshInterval || 60)
     refreshAllFolders(updated)
   }
 
@@ -201,7 +254,9 @@ const MainWindow: React.FC = () => {
       <Header
         config={config}
         loading={loading}
-        onRefresh={() => refreshAllFolders()}
+        countdownSeconds={isAutoRefreshActive ? countdown : null}
+        showCountdown={config.showRefreshCountdown !== false}
+        onRefresh={handleManualRefresh}
         onOpenSettings={() => {
           setSettingsTab('s3')
           setIsSettingsOpen(true)
@@ -231,7 +286,7 @@ const MainWindow: React.FC = () => {
               setIsSettingsOpen(true)
             }}
             onSelectEmail={handleSelectEmail}
-            onRefresh={() => fetchFolderEmails(activeFolder, config, false)}
+            onRefresh={handleManualRefresh}
             onCompose={() => setIsComposerOpen(true)}
             onDeleteEmail={(key, subject) => setDeleteTarget({ key, subject })}
           />

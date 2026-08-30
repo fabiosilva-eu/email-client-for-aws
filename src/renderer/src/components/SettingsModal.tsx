@@ -15,7 +15,9 @@ import {
   Send,
   Server,
   User,
-  Mail
+  Mail,
+  RefreshCw,
+  Clock
 } from 'lucide-react'
 import type { AppConfig, SmtpConfig, TestConnectionResult, TestSmtpResult } from '../types'
 
@@ -418,6 +420,76 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     className="w-full px-3.5 py-2 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
                   />
                 </div>
+              </div>
+
+              {/* Background Auto-Refresh Preferences */}
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw className="w-4 h-4 text-indigo-400" />
+                    <div>
+                      <span className="text-xs font-semibold text-slate-200 block">Automatic Background Refresh</span>
+                      <span className="text-[11px] text-slate-400">Silently check for new incoming emails periodically</span>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.autoRefreshEnabled !== false}
+                      onChange={(e) => setFormData({ ...formData, autoRefreshEnabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                  </label>
+                </div>
+
+                {formData.autoRefreshEnabled !== false && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-slate-800/60">
+                    {/* Interval selector */}
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-300 mb-1 flex items-center gap-1.5">
+                        <Clock className="w-3 h-3 text-indigo-400" />
+                        Refresh Interval
+                      </label>
+                      <select
+                        value={formData.autoRefreshInterval || 60}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            autoRefreshInterval: parseInt(e.target.value, 10) || 60
+                          })
+                        }
+                        className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-100 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer font-mono"
+                      >
+                        <option value={30}>Every 30 seconds</option>
+                        <option value={60}>Every 1 minute (Default)</option>
+                        <option value={120}>Every 2 minutes</option>
+                        <option value={300}>Every 5 minutes</option>
+                        <option value={600}>Every 10 minutes</option>
+                      </select>
+                    </div>
+
+                    {/* Show Countdown Toggle */}
+                    <div className="flex flex-col justify-end">
+                      <label className="flex items-center gap-2 cursor-pointer pt-1">
+                        <input
+                          type="checkbox"
+                          checked={formData.showRefreshCountdown !== false}
+                          onChange={(e) =>
+                            setFormData({ ...formData, showRefreshCountdown: e.target.checked })
+                          }
+                          className="rounded border-slate-800 bg-slate-950 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                        />
+                        <span className="text-[11px] text-slate-300 font-medium select-none">
+                          Show countdown on Refresh button
+                        </span>
+                      </label>
+                      <span className="text-[10px] text-slate-500 pl-6">
+                        Displays timer e.g. "Refresh (45s)"
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Optional Session Token (Collapsible) */}

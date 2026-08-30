@@ -163,6 +163,9 @@ The configuration is stored locally at `~/.config/s3-email-client/config.json` (
   "sessionToken": "",
   "prefix": "incoming/",
   "maxKeys": 100,
+  "autoRefreshEnabled": true,
+  "autoRefreshInterval": 60,
+  "showRefreshCountdown": true,
   "smtp": {
     "host": "email-smtp.eu-west-1.amazonaws.com",
     "port": 587,

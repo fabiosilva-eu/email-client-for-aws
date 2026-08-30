@@ -18,6 +18,9 @@ export interface AppConfig {
   sessionToken?: string
   prefix?: string
   maxKeys?: number
+  autoRefreshEnabled?: boolean
+  autoRefreshInterval?: number
+  showRefreshCountdown?: boolean
   smtp?: SmtpConfig
 }
 
