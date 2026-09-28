@@ -27,9 +27,10 @@ export const Header: React.FC<HeaderProps> = ({
     <header className="app-drag-region h-14 bg-slate-900/90 border-b border-slate-800/80 px-4 flex items-center justify-between select-none backdrop-blur-md z-10 sticky top-0">
       {/* Left branding & Mac traffic lights spacing */}
       <div className="flex items-center gap-3 pl-16 app-no-drag">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-          <Mail className="w-4 h-4 text-white" />
-        </div>
+        <img
+          alt="App Icon"
+          className="w-8 h-8 rounded-lg object-cover shadow-md shadow-indigo-500/20"
+        />
         <div>
           <h1 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
             Email Client for AWS S3 and SES

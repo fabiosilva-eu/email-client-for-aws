@@ -250,19 +250,26 @@ npm run dev
 
 ### Packaging Desktop Binaries
 
-Packaged installers and executables are placed in the `release/` folder:
-
+Packaged distribution files and source archives are automatically organized into `release/<version>/` (e.g. `release/0.1.0/`):
 ```bash
-# Package for macOS (.dmg and .zip)
-npm run dist:mac
+# Package for macOS (Universal / Apple Silicon & Intel)
+npm run dist:mac              # Builds all Mac targets (arm64, x64, universal)
+npm run dist:mac:arm64        # Apple Silicon (M1/M2/M3/M4)
+npm run dist:mac:x64          # Intel Macs
+npm run dist:mac:universal    # Universal Mac Binary (.dmg & .zip)
 
-# Package for Windows (.exe NSIS Installer and standalone Portable)
-npm run dist:win
+# Package for Windows (NSIS Installer & Portable .exe)
+npm run dist:win              # Builds all Windows targets (x64, ia32/x86, arm64)
+npm run dist:win:x64          # Standard 64-bit Windows PCs (Intel/AMD)
+npm run dist:win:arm64        # Windows on ARM (Snapdragon / Surface)
 
-# Package for Linux (.AppImage, .deb, .tar.gz)
+# Package for Linux (.AppImage, .deb, .tar.gz for x64 & arm64)
 npm run dist:linux
 
-# Package for all platforms
+# Package source code zip bundle
+npm run dist:source
+
+# Package all platforms and architectures simultaneously (including source.zip)
 npm run dist:all
 ```
 

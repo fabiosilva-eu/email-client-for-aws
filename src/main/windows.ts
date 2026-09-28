@@ -21,6 +21,13 @@ function getPreloadPath(): string {
   return path.join(__dirname, '../preload/index.js')
 }
 
+// Helper to get application icon path
+function getIconPath(): string {
+  const resourceIcon = path.join(__dirname, '../../resources/icon.png')
+  if (fs.existsSync(resourceIcon)) return resourceIcon
+  return path.join(process.cwd(), 'resources/icon.png')
+}
+
 // Attach debugging, logging and hotkey listeners
 function attachWindowLogging(win: BrowserWindow, windowName: string) {
   // Forward all console logs from renderer to terminal stdout
@@ -60,6 +67,7 @@ export function createMainWindow(): BrowserWindow {
 
   mainWindow = new BrowserWindow({
     title: 'Email Client for AWS S3 and SES',
+    icon: getIconPath(),
     width: 1200,
     height: 800,
     minWidth: 800,
@@ -116,6 +124,7 @@ export function createViewerWindow(key: string): BrowserWindow {
 
   const viewerWin = new BrowserWindow({
     title: windowTitle,
+    icon: getIconPath(),
     width: 900,
     height: 750,
     minWidth: 600,

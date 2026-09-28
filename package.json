@@ -2,17 +2,25 @@
   "name": "aws-email-client",
   "version": "0.1.0",
   "description": "Email Client for AWS S3 and SES",
+  "desktopName": "aws-email-client.desktop",
   "main": "dist-electron/main/index.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "dist": "npm run build && electron-builder",
-    "dist:mac": "npm run build && electron-builder --mac",
-    "dist:win": "npm run build && electron-builder --win",
-    "dist:linux": "npm run build && electron-builder --linux",
-    "dist:all": "npm run build && electron-builder -mwl"
+    "dist": "npm run build && electron-builder && node scripts/package-source.js && node scripts/organize-release.js",
+    "dist:source": "node scripts/package-source.js && node scripts/organize-release.js",
+    "dist:organize": "node scripts/organize-release.js",
+    "dist:mac": "npm run build && electron-builder --mac && node scripts/package-source.js && node scripts/organize-release.js",
+    "dist:mac:arm64": "npm run build && electron-builder --mac --arm64 && node scripts/package-source.js && node scripts/organize-release.js",
+    "dist:mac:x64": "npm run build && electron-builder --mac --x64 && node scripts/package-source.js && node scripts/organize-release.js",
+    "dist:mac:universal": "npm run build && electron-builder --mac --universal && node scripts/package-source.js && node scripts/organize-release.js",
+    "dist:win": "npm run build && electron-builder --win && node scripts/package-source.js && node scripts/organize-release.js",
+    "dist:win:x64": "npm run build && electron-builder --win --x64 && node scripts/package-source.js && node scripts/organize-release.js",
+    "dist:win:arm64": "npm run build && electron-builder --win --arm64 && node scripts/package-source.js && node scripts/organize-release.js",
+    "dist:linux": "npm run build && electron-builder --linux && node scripts/package-source.js && node scripts/organize-release.js",
+    "dist:all": "npm run build && electron-builder -mwl && node scripts/package-source.js && node scripts/organize-release.js"
   },
   "keywords": [
     "electron",
@@ -22,7 +30,7 @@
     "react",
     "vite"
   ],
-  "author": "Fabio Silva",
+  "author": "Fabio Silva <build@fabiosilva.eu>",
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.750.0",
@@ -63,27 +71,81 @@
       "dist-electron/**/*"
     ],
     "mac": {
+      "artifactName": "${productName}-${version}-macos-${arch}.${ext}",
       "target": [
-        "dmg",
-        "zip"
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64",
+            "universal"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "arm64",
+            "x64",
+            "universal"
+          ]
+        }
       ],
       "category": "public.app-category.productivity"
     },
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "ia32",
+            "arm64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64",
+            "ia32",
+            "arm64"
+          ]
+        }
       ]
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Email_Client_for_AWS_S3_and_SES_${version}_win_installer_${arch}.exe"
+    },
+    "portable": {
+      "artifactName": "Email_Client_for_AWS_S3_and_SES_${version}_win_portable_${arch}.exe"
     },
     "linux": {
+      "artifactName": "Email_Client_for_AWS_S3_and_SES_${version}_linux_${arch}.${ext}",
+      "maintainer": "Fabio Silva <build@fabiosilva.eu>",
+      "syncDesktopName": true,
       "target": [
-        "AppImage",
-        "deb",
-        "tar.gz"
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "tar.gz",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "category": "Network"
     }
