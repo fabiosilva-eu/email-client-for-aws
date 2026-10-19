@@ -7,6 +7,8 @@ import {
   AlertCircle,
   FolderOpen,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   X,
   Trash2
 } from 'lucide-react'
@@ -34,11 +36,28 @@ function formatBytes(bytes: number, decimals = 1): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i]
 }
 
-function formatDate(dateStr: string): string {
-  if (!dateStr) return '-'
+export function parseEmailDate(dateStr?: string, fallback?: string): number {
+  if (dateStr) {
+    let t = Date.parse(dateStr)
+    if (!isNaN(t)) return t
+    // Strip trailing timezone annotations like " (UTC)" or " (PST)"
+    const cleaned = dateStr.replace(/\s*\([^)]*\)\s*$/, '').trim()
+    t = Date.parse(cleaned)
+    if (!isNaN(t)) return t
+  }
+  if (fallback) {
+    const t = Date.parse(fallback)
+    if (!isNaN(t)) return t
+  }
+  return 0
+}
+
+function formatDate(dateStr: string, fallback?: string): string {
+  if (!dateStr && !fallback) return '-'
+  const timestamp = parseEmailDate(dateStr, fallback)
+  if (timestamp === 0) return dateStr || fallback || '-'
   try {
-    const d = new Date(dateStr)
-    if (isNaN(d.getTime())) return dateStr
+    const d = new Date(timestamp)
     return d.toLocaleString(undefined, {
       month: 'short',
       day: 'numeric',
@@ -47,7 +66,7 @@ function formatDate(dateStr: string): string {
       minute: '2-digit'
     })
   } catch {
-    return dateStr
+    return dateStr || fallback || '-'
   }
 }
 
@@ -87,6 +106,16 @@ export const EmailList: React.FC<EmailListProps> = ({
     }
 
     list.sort((a, b) => {
+      // True numeric timestamp sorting for dates
+      if (sortField === 'date') {
+        const timeA = parseEmailDate(a.date, a.lastModified)
+        const timeB = parseEmailDate(b.date, b.lastModified)
+        if (timeA !== timeB) {
+          return sortAsc ? timeA - timeB : timeB - timeA
+        }
+        return a.key.localeCompare(b.key)
+      }
+
       let valA: string | number = ''
       let valB: string | number = ''
 
@@ -120,6 +149,17 @@ export const EmailList: React.FC<EmailListProps> = ({
       setSortField(field)
       setSortAsc(false)
     }
+  }
+
+  const renderSortIcon = (field: 'date' | 'from' | 'subject' | 'size') => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="w-3 h-3 text-slate-500" />
+    }
+    return sortAsc ? (
+      <ArrowUp className="w-3 h-3 text-indigo-400" />
+    ) : (
+      <ArrowDown className="w-3 h-3 text-indigo-400" />
+    )
   }
 
   const getEmptyStateDetails = () => {
@@ -274,40 +314,40 @@ export const EmailList: React.FC<EmailListProps> = ({
               <tr>
                 <th
                   onClick={() => handleSort('from')}
-                  className="py-3 px-4 cursor-pointer hover:text-slate-200 transition"
+                  className={`py-3 px-4 cursor-pointer transition ${sortField === 'from' ? 'text-indigo-300 font-semibold' : 'hover:text-slate-200'}`}
                 >
                   <div className="flex items-center gap-1.5">
                     <span>{folder === 'sent' ? 'To / Recipient' : 'Sender'}</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                    {renderSortIcon('from')}
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('subject')}
-                  className="py-3 px-4 cursor-pointer hover:text-slate-200 transition"
+                  className={`py-3 px-4 cursor-pointer transition ${sortField === 'subject' ? 'text-indigo-300 font-semibold' : 'hover:text-slate-200'}`}
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Subject</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                    {renderSortIcon('subject')}
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('date')}
-                  className="py-3 px-4 cursor-pointer hover:text-slate-200 transition w-44"
+                  className={`py-3 px-4 cursor-pointer transition w-44 ${sortField === 'date' ? 'text-indigo-300 font-semibold' : 'hover:text-slate-200'}`}
                 >
                   <div className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5" />
                     <span>Date</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                    {renderSortIcon('date')}
                   </div>
                 </th>
                 <th
                   onClick={() => handleSort('size')}
-                  className="py-3 px-4 cursor-pointer hover:text-slate-200 transition w-36"
+                  className={`py-3 px-4 cursor-pointer transition w-36 ${sortField === 'size' ? 'text-indigo-300 font-semibold' : 'hover:text-slate-200'}`}
                 >
                   <div className="flex items-center gap-1.5">
                     <FileText className="w-3.5 h-3.5" />
                     <span>S3 Object / Size</span>
-                    <ArrowUpDown className="w-3 h-3 text-slate-500" />
+                    {renderSortIcon('size')}
                   </div>
                 </th>
                 {onDeleteEmail && <th className="py-3 px-3 w-12 text-right"></th>}
@@ -356,7 +396,7 @@ export const EmailList: React.FC<EmailListProps> = ({
                     {/* Date */}
                     <td className="py-3.5 px-4 text-slate-400 whitespace-nowrap">
                       <span title={`Email Date: ${email.date}\nS3 Last Modified: ${email.lastModified}`}>
-                        {formatDate(email.date)}
+                        {formatDate(email.date, email.lastModified)}
                       </span>
                     </td>
 

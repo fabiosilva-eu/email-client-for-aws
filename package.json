@@ -1,6 +1,6 @@
 {
   "name": "aws-email-client",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Email Client for AWS S3 and SES",
   "desktopName": "aws-email-client.desktop",
   "main": "dist-electron/main/index.js",

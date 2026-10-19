@@ -1,6 +1,7 @@
 import React from 'react'
 import { Settings, RefreshCw, Database, Mail } from 'lucide-react'
 import type { AwsConfig } from '../types'
+import appLogo from '../assets/icon.png'
 
 interface HeaderProps {
   config: AwsConfig | null
@@ -28,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Left branding & Mac traffic lights spacing */}
       <div className="flex items-center gap-3 pl-16 app-no-drag">
         <img
+          src={appLogo}
           alt="App Icon"
           className="w-8 h-8 rounded-lg object-cover shadow-md shadow-indigo-500/20"
         />
@@ -35,7 +37,7 @@ export const Header: React.FC<HeaderProps> = ({
           <h1 className="text-sm font-semibold text-slate-100 flex items-center gap-2">
             Email Client for AWS S3 and SES
             <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
-              v0.1
+              v0.1.1
             </span>
           </h1>
         </div>

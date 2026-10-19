@@ -71,6 +71,25 @@ export function decodeMimeWords(text: string): string {
 }
 
 /**
+ * Parse an email date string or fallback into a numeric unix timestamp in milliseconds
+ */
+export function parseEmailDate(dateStr?: string, fallback?: string): number {
+  if (dateStr) {
+    let t = Date.parse(dateStr)
+    if (!isNaN(t)) return t
+    // Strip trailing timezone annotations like " (UTC)" or " (PST)"
+    const cleaned = dateStr.replace(/\s*\([^)]*\)\s*$/, '').trim()
+    t = Date.parse(cleaned)
+    if (!isNaN(t)) return t
+  }
+  if (fallback) {
+    const t = Date.parse(fallback)
+    if (!isNaN(t)) return t
+  }
+  return 0
+}
+
+/**
  * Parse headers from the raw email text stream
  */
 export function parseRawEmailHeaders(rawText: string): ParsedHeaders {
@@ -312,6 +331,14 @@ export async function listS3Emails(options?: {
         }
       })
     )
+
+    // Sort results by true parsed email date descending (newest first)
+    results.sort((a, b) => {
+      const timeA = parseEmailDate(a.date, a.lastModified)
+      const timeB = parseEmailDate(b.date, b.lastModified)
+      if (timeA !== timeB) return timeB - timeA
+      return a.key.localeCompare(b.key)
+    })
 
     return { success: true, data: results }
   } catch (error: any) {
